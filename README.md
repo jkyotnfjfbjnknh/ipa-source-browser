@@ -17,7 +17,7 @@
 - **下载到「文件」App**：
   - 详情页点「下载 IPA」带进度条，可取消，也可下载任意历史版本。
   - 首次使用建议先在「管理源 > 下载位置」或详情页里**指定「文件」App 里的下载目录**（选「下载」文件夹并授权），之后的下载会直接存进该目录。
-  - 未指定时，文件存到 `文件 > 我的 iPhone > IPA 源商店 > Downloads`（应用已开启文件共享，该目录在「文件」App 里可见），详情页也提供系统分享按钮，可再另存到任意位置。
+  - 未指定时，文件存到本应用的 `Documents/Downloads`：独立安装时在 `文件 > 我的 iPhone > IPA 源商店 > Downloads`；通过 LiveContainer 运行时，在「文件」App 里打开 LiveContainer、本应用的数据文件夹下的 `Documents/Downloads`。详情页在下载完成后提供「另存到「文件」App…」，可再把单个 IPA 存到任意位置。
 
 ## 源格式兼容
 
@@ -29,7 +29,7 @@
 
 ## 技术栈
 
-- SwiftUI（iOS 16+），无第三方依赖
+- SwiftUI（iOS 26+），无第三方依赖
 - `URLSession` 拉取源 JSON 与下载 IPA（带进度）
 - 安全作用域书签（security-scoped bookmark）记住「文件」App 里授权的下载目录
 

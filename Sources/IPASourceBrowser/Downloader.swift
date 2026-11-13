@@ -1,4 +1,76 @@
 import Foundation
+import UIKit
+import UniformTypeIdentifiers
+
+/// True when the app runs as a guest app inside LiveContainer (its bundle
+/// lives inside LiveContainer's container). Used to describe file locations
+/// the way the user will actually find them.
+var isRunningInLiveContainer: Bool {
+    Bundle.main.bundlePath.contains("LiveContainer")
+}
+
+/// Presents the system folder picker the canonical UIKit way: a real
+/// UIDocumentPickerViewController presented from the topmost view controller,
+/// with a strongly retained delegate.
+///
+/// Earlier attempts embedded the picker in a SwiftUI sheet and used
+/// SwiftUI's fileImporter from inside a sheet; in re-signed / LiveContainer
+/// environments the picker appeared but tapping "Open" never delivered a
+/// result. Apple's documented flow presents the picker from a view
+/// controller, which is what this does.
+final class FolderPickerPresenter: NSObject, UIDocumentPickerDelegate {
+    static let shared = FolderPickerPresenter()
+
+    private var completion: ((URL?) -> Void)?
+
+    private override init() { super.init() }
+
+    func present(completion: @escaping (URL?) -> Void) {
+        guard let top = Self.topViewController() else {
+            completion(nil)
+            return
+        }
+        self.completion = completion
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [UTType.folder])
+        picker.delegate = self
+        picker.allowsMultipleSelection = false
+        // No directoryURL hint: let the system start at its normal location.
+        top.present(picker, animated: true)
+    }
+
+    func documentPicker(_ controller: UIDocumentPickerViewController,
+                        didPickDocumentsAt urls: [URL]) {
+        let result = urls.first
+        completion?(result)
+        completion = nil
+    }
+
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        completion?(nil)
+        completion = nil
+    }
+
+    private static func topViewController() -> UIViewController? {
+        let scenes = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+        let window = scenes.flatMap { $0.windows }.first { $0.isKeyWindow }
+            ?? scenes.flatMap { $0.windows }.first
+        var top = window?.rootViewController
+        while let presented = top?.presentedViewController {
+            top = presented
+        }
+        return top
+    }
+}
+
+/// Where the fallback Downloads folder actually shows up for the user,
+/// described for the environment the app currently runs in.
+var defaultDownloadsLocationDescription: String {
+    if isRunningInLiveContainer {
+        return "本应用在 LiveContainer 里的数据文件夹 > Documents > Downloads（在「文件」App 里打开 LiveContainer，再进本应用的数据文件夹就能找到）"
+    }
+    return "文件 > 我的 iPhone > IPA 源商店 > Downloads"
+}
 
 /// Remembers the folder the user picked inside the Files app (normally "Downloads")
 /// via a security-scoped bookmark, so later downloads can write straight into it.
@@ -140,7 +212,7 @@ final class IPADownloader: NSObject, ObservableObject, URLSessionDownloadDelegat
             savedIntoCustomFolder = usedCustomFolder
             statusText = usedCustomFolder
                 ? "已保存到「文件」App 的所选目录"
-                : "已保存到 文件 > 我的 iPhone > IPA 源商店 > Downloads"
+                : "已保存到默认 Downloads 文件夹"
         } catch {
             errorText = error.localizedDescription
             statusText = nil

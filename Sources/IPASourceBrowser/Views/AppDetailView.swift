@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct AppDetailView: View {
     let app: SourceApp
@@ -8,7 +7,6 @@ struct AppDetailView: View {
     var sourceID: String?
 
     @StateObject private var downloader = IPADownloader()
-    @State private var showFolderPicker = false
     @State private var folderVersion = 0 // bump to refresh folder label after picking
     @State private var screenshotIndex = 0
     @State private var showScreenshotViewer = false
@@ -41,19 +39,6 @@ struct AppDetailView: View {
         }
         .navigationTitle(app.name)
         .navigationBarTitleDisplayMode(.inline)
-        .fileImporter(
-            isPresented: $showFolderPicker,
-            allowedContentTypes: [.folder],
-            allowsMultipleSelection: false
-        ) { result in
-            // Tapping "Open" in the system picker returns the folder the user
-            // is standing in; save it as the downloads directory. The importer
-            // dismisses itself afterwards.
-            if case .success(let urls) = result, let url = urls.first {
-                DownloadsFolderManager.shared.saveBookmark(for: url)
-                folderVersion += 1
-            }
-        }
         .fullScreenCover(isPresented: $showScreenshotViewer) {
             ScreenshotViewer(
                 urls: app.allScreenshotURLs,
@@ -119,15 +104,17 @@ struct AppDetailView: View {
             }
 
             if let saved = downloader.savedFileURL {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                    Text(downloader.savedIntoCustomFolder
-                         ? "已保存到「文件」App：\(saved.lastPathComponent)"
-                         : "已保存到 文件 > 我的 iPhone > IPA 源商店 > Downloads")
-                        .font(.footnote)
-                    Spacer()
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                        Text(downloader.savedIntoCustomFolder
+                             ? "已保存到「文件」App 的所选目录：\(saved.lastPathComponent)"
+                             : "已保存到 \(defaultDownloadsLocationDescription)")
+                            .font(.footnote)
+                    }
                     ShareLink(item: saved) {
-                        Image(systemName: "square.and.arrow.up")
+                        Label("另存到「文件」App…", systemImage: "square.and.arrow.up")
+                            .font(.footnote.weight(.medium))
                     }
                 }
             }
@@ -143,14 +130,25 @@ struct AppDetailView: View {
                 Text("下载目录：「文件」App 里的「\(name)」文件夹")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                Button("更改下载目录") { showFolderPicker = true }
+                Button("更改下载目录") { pickDownloadsFolder() }
                     .font(.footnote)
             } else {
-                Text("尚未指定「文件」App 的下载目录，默认存进本应用的 Downloads（在「文件 > 我的 iPhone > IPA 源商店」里可见）。")
+                Text("尚未指定「文件」App 的下载目录，默认存到 \(defaultDownloadsLocationDescription)。")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                Button("指定「文件」App 里的下载目录") { showFolderPicker = true }
+                Button("指定「文件」App 里的下载目录") { pickDownloadsFolder() }
                     .font(.footnote)
+            }
+        }
+    }
+
+    /// Opens the system folder picker (presented by UIKit from the topmost
+    /// view controller); a picked folder is saved as the downloads directory.
+    private func pickDownloadsFolder() {
+        FolderPickerPresenter.shared.present { url in
+            if let url {
+                DownloadsFolderManager.shared.saveBookmark(for: url)
+                folderVersion += 1
             }
         }
     }

@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct ManageSourcesView: View {
     @ObservedObject var store: SourceStore
@@ -8,7 +7,6 @@ struct ManageSourcesView: View {
     @State private var newURL = ""
     @State private var isAdding = false
     @State private var addError: String?
-    @State private var showFolderPicker = false
     @State private var folderVersion = 0
 
     var body: some View {
@@ -78,18 +76,18 @@ struct ManageSourcesView: View {
                     let _ = folderVersion
                     if let name = DownloadsFolderManager.shared.customFolderName {
                         LabeledContent("当前下载目录", value: "文件 App · \(name)")
-                        Button("更改下载目录") { showFolderPicker = true }
+                        Button("更改下载目录") { pickDownloadsFolder() }
                         Button("恢复默认目录", role: .destructive) {
                             DownloadsFolderManager.shared.clearBookmark()
                             folderVersion += 1
                         }
                     } else {
-                        Button("指定「文件」App 里的下载目录") { showFolderPicker = true }
+                        Button("指定「文件」App 里的下载目录") { pickDownloadsFolder() }
                     }
                 } header: {
                     Text("下载位置")
                 } footer: {
-                    Text("指定后，从详情页下载的 IPA 会直接存进你在「文件」App 里选的文件夹（通常选「下载」）。未指定时存到 文件 > 我的 iPhone > IPA 源商店 > Downloads。")
+                    Text("指定后，从详情页下载的 IPA 会直接存进你在「文件」App 里选的文件夹（通常选「下载」）。未指定时存到 \(defaultDownloadsLocationDescription)。")
                 }
             }
             .navigationTitle("管理源")
@@ -102,18 +100,16 @@ struct ManageSourcesView: View {
                     EditButton()
                 }
             }
-            .fileImporter(
-                isPresented: $showFolderPicker,
-                allowedContentTypes: [.folder],
-                allowsMultipleSelection: false
-            ) { result in
-                // Tapping "Open" in the system picker returns the folder the
-                // user is standing in; save it as the downloads directory.
-                // The importer dismisses itself afterwards.
-                if case .success(let urls) = result, let url = urls.first {
-                    DownloadsFolderManager.shared.saveBookmark(for: url)
-                    folderVersion += 1
-                }
+        }
+    }
+
+    /// Opens the system folder picker (presented by UIKit from the topmost
+    /// view controller); a picked folder is saved as the downloads directory.
+    private func pickDownloadsFolder() {
+        FolderPickerPresenter.shared.present { url in
+            if let url {
+                DownloadsFolderManager.shared.saveBookmark(for: url)
+                folderVersion += 1
             }
         }
     }
