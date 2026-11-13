@@ -108,6 +108,8 @@ final class SourceStore: ObservableObject {
         subscriptions.removeAll { $0.url == id }
         loaded.removeAll { $0.id == id }
         persist()
+        // Deleting a source also deletes its locally cached icons/screenshots.
+        IconCache.shared.removeCache(forSourceURL: id)
     }
 
     func moveSource(from source: IndexSet, to destination: Int) {

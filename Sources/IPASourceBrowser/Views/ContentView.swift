@@ -70,7 +70,7 @@ struct ContentView: View {
             toggle(loaded.id)
         } label: {
             HStack(spacing: 10) {
-                AppIconView(urlString: loaded.source?.iconURL, name: loaded.displayName, size: 30)
+                AppIconView(urlString: loaded.source?.iconURL, name: loaded.displayName, size: 30, cacheSourceURL: loaded.subscription.url)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(loaded.displayName)
                         .font(.headline)
@@ -128,9 +128,9 @@ struct ContentView: View {
             } else {
                 ForEach(apps) { app in
                     NavigationLink {
-                        AppDetailView(app: app, sourceName: source.name)
+                        AppDetailView(app: app, sourceName: source.name, sourceID: loaded.subscription.url)
                     } label: {
-                        AppCardView(app: app)
+                        AppCardView(app: app, sourceID: loaded.subscription.url)
                     }
                 }
             }

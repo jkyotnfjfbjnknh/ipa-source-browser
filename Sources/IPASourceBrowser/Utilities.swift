@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 extension Color {
     /// Parses AltStore tint colors, which appear both as "018084" and "#21486b".
@@ -34,23 +35,21 @@ func formatDateString(_ raw: String?) -> String {
     return String(raw.prefix(10))
 }
 
-/// Rounded app icon loaded from a remote URL, with a letter placeholder fallback.
+/// Rounded app icon, served from the per-source local cache (see IconCache),
+/// with a letter placeholder while loading or when offline with no cache.
 struct AppIconView: View {
     let urlString: String?
     let name: String
     var size: CGFloat = 56
+    /// Subscription URL of the source this icon belongs to; decides its cache group.
+    var cacheSourceURL: String?
+
+    @State private var uiImage: UIImage?
 
     var body: some View {
         Group {
-            if let urlString, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    default:
-                        placeholder
-                    }
-                }
+            if let uiImage {
+                Image(uiImage: uiImage).resizable().scaledToFill()
             } else {
                 placeholder
             }
@@ -61,6 +60,11 @@ struct AppIconView: View {
             RoundedRectangle(cornerRadius: size * 0.24, style: .continuous)
                 .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
         )
+        .task(id: urlString) {
+            uiImage = nil
+            guard let urlString, let url = URL(string: urlString) else { return }
+            uiImage = await IconCache.shared.loadImage(from: url, sourceURL: cacheSourceURL)
+        }
     }
 
     private var placeholder: some View {
@@ -69,6 +73,27 @@ struct AppIconView: View {
             Text(String(name.prefix(1)))
                 .font(.system(size: size * 0.42, weight: .semibold))
                 .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Full-bleed remote image (screenshots) backed by the same per-source cache.
+struct CachedRemoteImageView: View {
+    let url: URL
+    var cacheSourceURL: String?
+
+    @State private var uiImage: UIImage?
+
+    var body: some View {
+        Group {
+            if let uiImage {
+                Image(uiImage: uiImage).resizable().scaledToFill()
+            } else {
+                Color.secondary.opacity(0.15)
+            }
+        }
+        .task(id: url) {
+            uiImage = await IconCache.shared.loadImage(from: url, sourceURL: cacheSourceURL)
         }
     }
 }

@@ -3,10 +3,12 @@ import SwiftUI
 /// SideStore-style app row: icon, name, subtitle, and a GET-style pill.
 struct AppCardView: View {
     let app: SourceApp
+    /// Subscription URL of the owning source; decides the icon cache group.
+    var sourceID: String?
 
     var body: some View {
         HStack(spacing: 12) {
-            AppIconView(urlString: app.iconURL, name: app.name, size: 56)
+            AppIconView(urlString: app.iconURL, name: app.name, size: 56, cacheSourceURL: sourceID)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(app.name)

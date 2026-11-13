@@ -3,6 +3,8 @@ import SwiftUI
 struct AppDetailView: View {
     let app: SourceApp
     let sourceName: String
+    /// Subscription URL of the owning source; decides the image cache group.
+    var sourceID: String?
 
     @StateObject private var downloader = IPADownloader()
     @State private var showFolderPicker = false
@@ -49,7 +51,7 @@ struct AppDetailView: View {
 
     private var header: some View {
         HStack(spacing: 16) {
-            AppIconView(urlString: app.iconURL, name: app.name, size: 92)
+            AppIconView(urlString: app.iconURL, name: app.name, size: 92, cacheSourceURL: sourceID)
             VStack(alignment: .leading, spacing: 4) {
                 Text(app.name).font(.title2.bold()).lineLimit(2)
                 if let subtitle = app.subtitle {
@@ -164,15 +166,9 @@ struct AppDetailView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(Array(app.allScreenshotURLs.enumerated()), id: \.offset) { _, url in
-                        AsyncImage(url: url) { phase in
-                            if case .success(let image) = phase {
-                                image.resizable().scaledToFill()
-                            } else {
-                                Color.secondary.opacity(0.15)
-                            }
-                        }
-                        .frame(width: 150, height: 300)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        CachedRemoteImageView(url: url, cacheSourceURL: sourceID)
+                            .frame(width: 150, height: 300)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                 }
             }
