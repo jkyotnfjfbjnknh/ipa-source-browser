@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct AppDetailView: View {
     let app: SourceApp
@@ -9,6 +10,8 @@ struct AppDetailView: View {
     @StateObject private var downloader = IPADownloader()
     @State private var showFolderPicker = false
     @State private var folderVersion = 0 // bump to refresh folder label after picking
+    @State private var screenshotIndex = 0
+    @State private var showScreenshotViewer = false
 
     var body: some View {
         ScrollView {
@@ -38,12 +41,25 @@ struct AppDetailView: View {
         }
         .navigationTitle(app.name)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showFolderPicker) {
-            FolderPicker { url in
+        .fileImporter(
+            isPresented: $showFolderPicker,
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            // Tapping "Open" in the system picker returns the folder the user
+            // is standing in; save it as the downloads directory. The importer
+            // dismisses itself afterwards.
+            if case .success(let urls) = result, let url = urls.first {
                 DownloadsFolderManager.shared.saveBookmark(for: url)
                 folderVersion += 1
-                showFolderPicker = false
             }
+        }
+        .fullScreenCover(isPresented: $showScreenshotViewer) {
+            ScreenshotViewer(
+                urls: app.allScreenshotURLs,
+                startIndex: screenshotIndex,
+                cacheSourceURL: sourceID
+            )
         }
     }
 
@@ -165,10 +181,14 @@ struct AppDetailView: View {
         section(title: "预览") {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    ForEach(Array(app.allScreenshotURLs.enumerated()), id: \.offset) { _, url in
+                    ForEach(Array(app.allScreenshotURLs.enumerated()), id: \.offset) { index, url in
                         CachedRemoteImageView(url: url, cacheSourceURL: sourceID)
                             .frame(width: 150, height: 300)
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .onTapGesture {
+                                screenshotIndex = index
+                                showScreenshotViewer = true
+                            }
                     }
                 }
             }

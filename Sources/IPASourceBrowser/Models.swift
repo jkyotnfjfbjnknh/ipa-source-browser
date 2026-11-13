@@ -140,6 +140,8 @@ struct LoadedSource: Identifiable {
     var source: AltSource?
     var errorMessage: String?
     var isLoading: Bool = false
+    /// When the displayed content was fetched from the network (cache write time).
+    var lastFetchedAt: Date?
 
     var displayName: String {
         source?.name ?? URL(string: subscription.url)?.host ?? subscription.url

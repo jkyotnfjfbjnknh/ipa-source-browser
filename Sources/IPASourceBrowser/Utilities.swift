@@ -81,13 +81,19 @@ struct AppIconView: View {
 struct CachedRemoteImageView: View {
     let url: URL
     var cacheSourceURL: String?
+    /// true: fill the frame (thumbnails); false: fit the whole image (fullscreen viewer).
+    var fill: Bool = true
 
     @State private var uiImage: UIImage?
 
     var body: some View {
         Group {
             if let uiImage {
-                Image(uiImage: uiImage).resizable().scaledToFill()
+                if fill {
+                    Image(uiImage: uiImage).resizable().scaledToFill()
+                } else {
+                    Image(uiImage: uiImage).resizable().scaledToFit()
+                }
             } else {
                 Color.secondary.opacity(0.15)
             }

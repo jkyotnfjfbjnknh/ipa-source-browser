@@ -1,7 +1,4 @@
 import Foundation
-import SwiftUI
-import UIKit
-import UniformTypeIdentifiers
 
 /// Remembers the folder the user picked inside the Files app (normally "Downloads")
 /// via a security-scoped bookmark, so later downloads can write straight into it.
@@ -164,30 +161,3 @@ final class IPADownloader: NSObject, ObservableObject, URLSessionDownloadDelegat
     }
 }
 
-/// Folder picker used to authorize a folder inside the Files app (e.g. Downloads).
-struct FolderPicker: UIViewControllerRepresentable {
-    var onPick: (URL) -> Void
-
-    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [UTType.folder])
-        picker.allowsMultipleSelection = false
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onPick: onPick)
-    }
-
-    final class Coordinator: NSObject, UIDocumentPickerDelegate {
-        let onPick: (URL) -> Void
-        init(onPick: @escaping (URL) -> Void) { self.onPick = onPick }
-
-        func documentPicker(_ controller: UIDocumentPickerViewController,
-                            didPickDocumentsAt urls: [URL]) {
-            if let url = urls.first { onPick(url) }
-        }
-    }
-}

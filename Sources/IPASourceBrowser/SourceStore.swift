@@ -21,11 +21,17 @@ final class SourceStore: ObservableObject {
             subscriptions = Self.defaultSourceURLs.map { SubscribedSource(url: $0) }
             persist()
         }
-        loaded = subscriptions.map { LoadedSource(subscription: $0) }
-        Task { await refreshAll() }
+        // Launch reads the local feed cache only. Nothing is fetched from the
+        // network until the user explicitly refreshes.
+        loaded = subscriptions.map { subscription in
+            var entry = LoadedSource(subscription: subscription)
+            entry.source = SourceFeedCache.shared.loadSource(for: subscription.url)
+            entry.lastFetchedAt = SourceFeedCache.shared.fetchedAt(for: subscription.url)
+            return entry
+        }
     }
 
-    // MARK: - Fetching
+    // MARK: - Fetching (user-triggered refresh only)
 
     func refreshAll() async {
         for subscription in subscriptions {
@@ -38,15 +44,19 @@ final class SourceStore: ObservableObject {
         loaded[index].isLoading = true
         loaded[index].errorMessage = nil
         do {
-            let source = try await Self.fetchSource(from: subscription.url)
+            let data = try await Self.fetchSourceData(from: subscription.url)
+            let source = try JSONDecoder().decode(AltSource.self, from: data)
+            SourceFeedCache.shared.save(data: data, for: subscription.url)
             loaded[index].source = source
+            loaded[index].lastFetchedAt = Date()
         } catch {
+            // Keep showing the cached copy (if any) when a refresh fails.
             loaded[index].errorMessage = Self.friendlyError(error)
         }
         loaded[index].isLoading = false
     }
 
-    static func fetchSource(from urlString: String) async throws -> AltSource {
+    static func fetchSourceData(from urlString: String) async throws -> Data {
         guard let url = URL(string: urlString) else {
             throw URLError(.badURL)
         }
@@ -57,6 +67,11 @@ final class SourceStore: ObservableObject {
             throw NSError(domain: "SourceFetch", code: http.statusCode,
                           userInfo: [NSLocalizedDescriptionKey: "服务器返回 \(http.statusCode)"])
         }
+        return data
+    }
+
+    static func fetchSource(from urlString: String) async throws -> AltSource {
+        let data = try await fetchSourceData(from: urlString)
         return try JSONDecoder().decode(AltSource.self, from: data)
     }
 
@@ -92,30 +107,43 @@ final class SourceStore: ObservableObject {
         guard !subscriptions.contains(where: { $0.url == trimmed }) else {
             throw AddError.duplicate
         }
+        let data: Data
+        let source: AltSource
         do {
-            _ = try await Self.fetchSource(from: trimmed)
+            data = try await Self.fetchSourceData(from: trimmed)
+            source = try JSONDecoder().decode(AltSource.self, from: data)
         } catch {
             throw AddError.fetchFailed(Self.friendlyError(error))
         }
+        // The validated first fetch becomes the new source's local cache.
+        SourceFeedCache.shared.save(data: data, for: trimmed)
         let subscription = SubscribedSource(url: trimmed)
         subscriptions.append(subscription)
-        loaded.append(LoadedSource(subscription: subscription))
+        var entry = LoadedSource(subscription: subscription)
+        entry.source = source
+        entry.lastFetchedAt = Date()
+        loaded.append(entry)
         persist()
-        await refresh(subscription)
     }
 
     func removeSource(id: String) {
         subscriptions.removeAll { $0.url == id }
         loaded.removeAll { $0.id == id }
         persist()
-        // Deleting a source also deletes its locally cached icons/screenshots.
+        // Deleting a source also deletes its local caches: the feed JSON
+        // and its cached icons/screenshots.
+        SourceFeedCache.shared.remove(for: id)
         IconCache.shared.removeCache(forSourceURL: id)
     }
 
     func moveSource(from source: IndexSet, to destination: Int) {
         subscriptions.move(fromOffsets: source, toOffset: destination)
         loaded = subscriptions.map { sub in
-            loaded.first(where: { $0.id == sub.url }) ?? LoadedSource(subscription: sub)
+            if let existing = loaded.first(where: { $0.id == sub.url }) { return existing }
+            var entry = LoadedSource(subscription: sub)
+            entry.source = SourceFeedCache.shared.loadSource(for: sub.url)
+            entry.lastFetchedAt = SourceFeedCache.shared.fetchedAt(for: sub.url)
+            return entry
         }
         persist()
     }

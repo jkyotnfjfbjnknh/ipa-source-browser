@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ManageSourcesView: View {
     @ObservedObject var store: SourceStore
@@ -101,11 +102,17 @@ struct ManageSourcesView: View {
                     EditButton()
                 }
             }
-            .sheet(isPresented: $showFolderPicker) {
-                FolderPicker { url in
+            .fileImporter(
+                isPresented: $showFolderPicker,
+                allowedContentTypes: [.folder],
+                allowsMultipleSelection: false
+            ) { result in
+                // Tapping "Open" in the system picker returns the folder the
+                // user is standing in; save it as the downloads directory.
+                // The importer dismisses itself afterwards.
+                if case .success(let urls) = result, let url = urls.first {
                     DownloadsFolderManager.shared.saveBookmark(for: url)
                     folderVersion += 1
-                    showFolderPicker = false
                 }
             }
         }
