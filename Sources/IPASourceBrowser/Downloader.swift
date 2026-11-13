@@ -28,18 +28,30 @@ func topmostViewController() -> UIViewController? {
 /// original when — and only when — the user completes the "Save to Files"
 /// activity. Any other activity (AirDrop, copy, …) leaves the file in place.
 enum FileSharePresenter {
-    static let saveToFilesActivity =
-        UIActivity.ActivityType("com.apple.DocumentManager.SaveToFiles")
+    /// The "Save to Files" activity has reported different type strings
+    /// across iOS versions (com.apple.DocumentManager.SaveToFiles,
+    /// com.apple.CloudDocsUI.AddToiCloudDrive, …), so match by token
+    /// instead of exact equality.
+    static func isSaveToFiles(_ activity: UIActivity.ActivityType?) -> Bool {
+        guard let raw = activity?.rawValue.lowercased() else { return false }
+        return raw.contains("savetofiles")
+            || raw.contains("clouddocs")
+            || raw.contains("addtoicloud")
+            || raw.contains("documentmanager")
+    }
 
     static func present(fileURL: URL,
                         deleteOriginalOnSaveToFiles: Bool,
-                        onMoved: @escaping () -> Void) {
+                        onMoved: @escaping () -> Void,
+                        onReceipt: @escaping (String) -> Void) {
         guard let top = topmostViewController() else { return }
         let vc = UIActivityViewController(activityItems: [fileURL],
                                           applicationActivities: nil)
         vc.completionWithItemsHandler = { activity, completed, _, _ in
+            let raw = activity?.rawValue ?? "（无类型）"
+            onReceipt("\(raw) · 完成=\(completed ? "是" : "否")")
             guard completed,
-                  activity == saveToFilesActivity,
+                  isSaveToFiles(activity),
                   deleteOriginalOnSaveToFiles else { return }
             try? FileManager.default.removeItem(at: fileURL)
             onMoved()
