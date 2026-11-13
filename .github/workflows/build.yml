@@ -1,0 +1,78 @@
+name: Build & Release IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag to publish (e.g. v1.0.0)"
+        required: true
+        default: "v1.0.0"
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build unsigned IPA
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build (unsigned, iphoneos)
+        run: |
+          set -euo pipefail
+          xcodebuild build \
+            -project IPASourceBrowser.xcodeproj \
+            -scheme IPASourceBrowser \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            | tee build/xcodebuild.log
+
+      - name: Package IPA
+        run: |
+          set -euo pipefail
+          APP_PATH="$(find build/DerivedData/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -n 1)"
+          echo "App: $APP_PATH"
+          test -n "$APP_PATH"
+          rm -rf dist && mkdir -p dist/Payload
+          cp -R "$APP_PATH" dist/Payload/
+          cd dist
+          zip -qry IPASourceBrowser.ipa Payload
+          ls -lh IPASourceBrowser.ipa
+          shasum -a 256 IPASourceBrowser.ipa
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IPASourceBrowser-ipa
+          path: dist/IPASourceBrowser.ipa
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version || github.ref_name }}
+          name: IPA 源商店 ${{ inputs.version || github.ref_name }}
+          body: |
+            未签名 IPA，请用 SideStore / LiveContainer / Impactor / Sideloadly 等工具自签后安装。
+
+            功能：订阅 AltStore / SideStore 格式的公开 IPA 源、按源分组折叠浏览、应用详情页、把 IPA 下载到「文件」App。
+          files: dist/IPASourceBrowser.ipa
+          draft: false
+          prerelease: false
