@@ -17,7 +17,7 @@
 - **下载到「文件」App**：
   - 详情页点「下载 IPA」带进度条，可取消，也可下载任意历史版本。
   - 首次使用建议先在「管理源 > 下载位置」或详情页里**指定「文件」App 里的下载目录**（选「下载」文件夹并授权），之后的下载会直接存进该目录。
-  - 未指定时，文件存到本应用的 `Documents/Downloads`：独立安装时在 `文件 > 我的 iPhone > IPA 源商店 > Downloads`；通过 LiveContainer 运行时，在「文件」App 里打开 LiveContainer、本应用的数据文件夹下的 `Documents/Downloads`。详情页在下载完成后提供「另存到「文件」App…」，可再把单个 IPA 存到任意位置。
+  - 未指定时，文件存到本应用的 `Documents/Downloads`：独立安装时在 `文件 > 我的 iPhone > IPA 源商店 > Downloads`；通过 LiveContainer 运行时，在「文件」App 里打开 LiveContainer、本应用的数据文件夹下的 `Documents/Downloads`。详情页在下载完成后提供「另存到「文件」App…」：在分享面板里选「存储到文件」并保存成功后，应用内的原件会被自动删除，等同剪切（文件已直存自选目录时不删，分享仍是复制）。
 
 ## 源格式兼容
 

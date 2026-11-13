@@ -9,6 +9,52 @@ var isRunningInLiveContainer: Bool {
     Bundle.main.bundlePath.contains("LiveContainer")
 }
 
+/// The topmost presented view controller, for presenting UIKit UI the
+/// canonical way from anywhere in the SwiftUI hierarchy.
+func topmostViewController() -> UIViewController? {
+    let scenes = UIApplication.shared.connectedScenes
+        .compactMap { $0 as? UIWindowScene }
+    let window = scenes.flatMap { $0.windows }.first { $0.isKeyWindow }
+        ?? scenes.flatMap { $0.windows }.first
+    var top = window?.rootViewController
+    while let presented = top?.presentedViewController {
+        top = presented
+    }
+    return top
+}
+
+/// Presents the system share sheet for a downloaded file. The share sheet
+/// itself can only copy, so to get "move" semantics the app deletes its own
+/// original when — and only when — the user completes the "Save to Files"
+/// activity. Any other activity (AirDrop, copy, …) leaves the file in place.
+enum FileSharePresenter {
+    static let saveToFilesActivity =
+        UIActivity.ActivityType("com.apple.DocumentManager.SaveToFiles")
+
+    static func present(fileURL: URL,
+                        deleteOriginalOnSaveToFiles: Bool,
+                        onMoved: @escaping () -> Void) {
+        guard let top = topmostViewController() else { return }
+        let vc = UIActivityViewController(activityItems: [fileURL],
+                                          applicationActivities: nil)
+        vc.completionWithItemsHandler = { activity, completed, _, _ in
+            guard completed,
+                  activity == saveToFilesActivity,
+                  deleteOriginalOnSaveToFiles else { return }
+            try? FileManager.default.removeItem(at: fileURL)
+            onMoved()
+        }
+        if let pop = vc.popoverPresentationController {
+            pop.sourceView = top.view
+            pop.sourceRect = CGRect(x: top.view.bounds.midX,
+                                    y: top.view.bounds.midY,
+                                    width: 0, height: 0)
+            pop.permittedArrowDirections = []
+        }
+        top.present(vc, animated: true)
+    }
+}
+
 /// Presents the system folder picker the canonical UIKit way: a real
 /// UIDocumentPickerViewController presented from the topmost view controller,
 /// with a strongly retained delegate.
@@ -26,7 +72,7 @@ final class FolderPickerPresenter: NSObject, UIDocumentPickerDelegate {
     private override init() { super.init() }
 
     func present(completion: @escaping (URL?) -> Void) {
-        guard let top = Self.topViewController() else {
+        guard let top = topmostViewController() else {
             completion(nil)
             return
         }
@@ -48,18 +94,6 @@ final class FolderPickerPresenter: NSObject, UIDocumentPickerDelegate {
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
         completion?(nil)
         completion = nil
-    }
-
-    private static func topViewController() -> UIViewController? {
-        let scenes = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-        let window = scenes.flatMap { $0.windows }.first { $0.isKeyWindow }
-            ?? scenes.flatMap { $0.windows }.first
-        var top = window?.rootViewController
-        while let presented = top?.presentedViewController {
-            top = presented
-        }
-        return top
     }
 }
 

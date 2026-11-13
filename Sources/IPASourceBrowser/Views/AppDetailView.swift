@@ -8,6 +8,7 @@ struct AppDetailView: View {
 
     @StateObject private var downloader = IPADownloader()
     @State private var folderVersion = 0 // bump to refresh folder label after picking
+    @State private var movedToFiles = false
     @State private var screenshotIndex = 0
     @State private var showScreenshotViewer = false
 
@@ -39,6 +40,7 @@ struct AppDetailView: View {
         }
         .navigationTitle(app.name)
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: downloader.savedFileURL) { _, _ in movedToFiles = false }
         .fullScreenCover(isPresented: $showScreenshotViewer) {
             ScreenshotViewer(
                 urls: app.allScreenshotURLs,
@@ -103,7 +105,13 @@ struct AppDetailView: View {
                     .foregroundStyle(.red)
             }
 
-            if let saved = downloader.savedFileURL {
+            if movedToFiles {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                    Text("已移到「文件」App，应用内的原件已删除")
+                        .font(.footnote)
+                }
+            } else if let saved = downloader.savedFileURL {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
@@ -112,7 +120,9 @@ struct AppDetailView: View {
                              : "已保存到 \(defaultDownloadsLocationDescription)")
                             .font(.footnote)
                     }
-                    ShareLink(item: saved) {
+                    Button {
+                        shareSavedFile(saved)
+                    } label: {
                         Label("另存到「文件」App…", systemImage: "square.and.arrow.up")
                             .font(.footnote.weight(.medium))
                     }
@@ -139,6 +149,19 @@ struct AppDetailView: View {
                 Button("指定「文件」App 里的下载目录") { pickDownloadsFolder() }
                     .font(.footnote)
             }
+        }
+    }
+
+    /// Shares the saved file; choosing "Save to Files" in the share sheet
+    /// deletes the in-app original afterwards (move semantics). Files that
+    /// were downloaded straight into the user's chosen folder are never
+    /// deleted — sharing those stays a copy.
+    private func shareSavedFile(_ url: URL) {
+        FileSharePresenter.present(
+            fileURL: url,
+            deleteOriginalOnSaveToFiles: !downloader.savedIntoCustomFolder
+        ) {
+            movedToFiles = true
         }
     }
 
