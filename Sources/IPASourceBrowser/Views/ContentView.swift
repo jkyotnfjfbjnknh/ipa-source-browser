@@ -147,6 +147,8 @@ struct ContentView: View {
                     } label: {
                         AppCardView(app: app, sourceID: loaded.subscription.url)
                     }
+                    // Pull the app icon as far left as the list allows.
+                    .listRowInsets(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
                 }
             }
         } else if loaded.isLoading {
