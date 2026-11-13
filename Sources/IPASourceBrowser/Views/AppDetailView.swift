@@ -9,7 +9,6 @@ struct AppDetailView: View {
     @StateObject private var downloader = IPADownloader()
     @State private var folderVersion = 0 // bump to refresh folder label after picking
     @State private var movedToFiles = false
-    @State private var shareReceipt = ""
     @State private var screenshotIndex = 0
     @State private var showScreenshotViewer = false
 
@@ -41,7 +40,7 @@ struct AppDetailView: View {
         }
         .navigationTitle(app.name)
         .navigationBarTitleDisplayMode(.inline)
-        .onChange(of: downloader.savedFileURL) { _, _ in movedToFiles = false; shareReceipt = "" }
+        .onChange(of: downloader.savedFileURL) { _, _ in movedToFiles = false }
         .fullScreenCover(isPresented: $showScreenshotViewer) {
             ScreenshotViewer(
                 urls: app.allScreenshotURLs,
@@ -130,12 +129,6 @@ struct AppDetailView: View {
                 }
             }
 
-            if !shareReceipt.isEmpty {
-                Text("分享回执：\(shareReceipt)")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
             folderRow
         }
     }
@@ -167,8 +160,7 @@ struct AppDetailView: View {
         FileSharePresenter.present(
             fileURL: url,
             deleteOriginalOnSaveToFiles: !downloader.savedIntoCustomFolder,
-            onMoved: { movedToFiles = true },
-            onReceipt: { shareReceipt = $0 }
+            onMoved: { movedToFiles = true }
         )
     }
 

@@ -23,16 +23,7 @@ struct AppCardView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-
-            Spacer(minLength: 4)
-
-            Text("查看")
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(Color(hexString: app.tintColor) ?? .accentColor)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .background((Color(hexString: app.tintColor) ?? .accentColor).opacity(0.14))
-                .clipShape(Capsule())
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 6)
         .contentShape(Rectangle())

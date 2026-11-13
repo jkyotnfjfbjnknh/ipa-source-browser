@@ -42,14 +42,11 @@ enum FileSharePresenter {
 
     static func present(fileURL: URL,
                         deleteOriginalOnSaveToFiles: Bool,
-                        onMoved: @escaping () -> Void,
-                        onReceipt: @escaping (String) -> Void) {
+                        onMoved: @escaping () -> Void) {
         guard let top = topmostViewController() else { return }
         let vc = UIActivityViewController(activityItems: [fileURL],
                                           applicationActivities: nil)
         vc.completionWithItemsHandler = { activity, completed, _, _ in
-            let raw = activity?.rawValue ?? "（无类型）"
-            onReceipt("\(raw) · 完成=\(completed ? "是" : "否")")
             guard completed,
                   isSaveToFiles(activity),
                   deleteOriginalOnSaveToFiles else { return }
