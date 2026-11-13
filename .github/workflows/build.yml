@@ -34,6 +34,7 @@ jobs:
       - name: Build (unsigned, iphoneos)
         run: |
           set -euo pipefail
+          mkdir -p build
           xcodebuild build \
             -project IPASourceBrowser.xcodeproj \
             -scheme IPASourceBrowser \
