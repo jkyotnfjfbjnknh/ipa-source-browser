@@ -26,27 +26,6 @@
 - 旧格式：应用本身带平铺的 `version` / `downloadURL` / `size` 等字段
 - `size` 为数字或字符串都可；截图支持 `screenshotURLs[]` 或 `screenshots[{imageURL}]`；主题色支持 `018084` 与 `#21486b` 两种写法。
 
-## 构建与发布（GitHub Actions）
-
-源码用 [XcodeGen](https://github.com/yonaskolb/XcodeGen) 的 `project.yml` 描述工程，不提交 `.xcodeproj`。
-
-- `.github/workflows/build.yml` 在 GitHub 免费的 `macos-15` 机器上运行：
-  1. `brew install xcodegen` 并生成工程
-  2. `xcodebuild` 以**未签名**方式构建 iphoneos Release
-  3. 打包 `Payload/*.app` 为 `IPASourceBrowser.ipa`
-  4. 上传构建产物，并发布到仓库 **Releases** 页面
-- 触发方式：
-  - 手动：Actions 页选 “Build & Release IPA” → Run workflow，填版本号（如 `v1.0.0`）
-  - 或推 `v*` 标签
-
-本地构建（有 Mac 时）：
-
-```bash
-brew install xcodegen
-xcodegen generate
-open IPASourceBrowser.xcodeproj
-```
-
 ## 技术栈
 
 - SwiftUI（iOS 16+），无第三方依赖
