@@ -33,4 +33,3 @@
 - `URLSession` 拉取源 JSON 与下载 IPA（带进度）
 - 安全作用域书签（security-scoped bookmark）记住「文件」App 里授权的下载目录
 
-Bundle ID：`com.jkyotnfjfbjnknh.ipasourcebrowser`
