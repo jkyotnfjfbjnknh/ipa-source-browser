@@ -3,8 +3,8 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var store = SourceStore()
     @State private var searchText = ""
-    /// Expansion state per source. The system's expandable Section control
-    /// animates expansion/collapse and rotates its disclosure chevron itself.
+    /// Expansion state per source, bound to a DisclosureGroup — the system's
+    /// own control, which animates expansion/collapse and rotates its chevron.
     @State private var expansion: [String: Bool] = [:]
     @State private var showManage = false
 
@@ -69,14 +69,17 @@ struct ContentView: View {
     private var sourceList: some View {
         List {
             ForEach(store.loaded) { loaded in
-                Section(isExpanded: expansionBinding(for: loaded.id)) {
+                // DisclosureGroup is the system's own expandable control:
+                // it animates expand/collapse itself and rotates its
+                // disclosure chevron (trailing side) with the same motion.
+                DisclosureGroup(isExpanded: expansionBinding(for: loaded.id)) {
                     sectionBody(for: loaded)
-                } header: {
+                } label: {
                     sourceHeader(for: loaded)
                 }
             }
         }
-        .listStyle(.sidebar)
+        .listStyle(.insetGrouped)
     }
 
     private func expansionBinding(for id: String) -> Binding<Bool> {
