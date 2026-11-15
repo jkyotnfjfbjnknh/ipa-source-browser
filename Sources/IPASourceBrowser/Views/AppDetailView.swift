@@ -7,7 +7,6 @@ struct AppDetailView: View {
     var sourceID: String?
 
     @StateObject private var downloader = IPADownloader()
-    @State private var folderVersion = 0 // bump to refresh folder label after picking
     @State private var movedToFiles = false
     @State private var screenshotIndex = 0
     @State private var showScreenshotViewer = false
@@ -18,6 +17,12 @@ struct AppDetailView: View {
                 header
                 downloadSection
                 infoGrid
+                if let githubRepo {
+                    Link(destination: githubRepo.url) {
+                        Label("GitHub 仓库：\(githubRepo.name)", systemImage: "link")
+                            .font(.subheadline.weight(.medium))
+                    }
+                }
                 if !app.allScreenshotURLs.isEmpty { screenshots }
                 if let description = app.localizedDescription, !description.isEmpty {
                     section(title: "介绍") {
@@ -51,6 +56,21 @@ struct AppDetailView: View {
     }
 
     // MARK: Sections
+
+    /// Repo page derived from the download URL when the IPA is hosted on
+    /// GitHub (github.com/<owner>/<repo>/…). The source format has no
+    /// dedicated repo field, so this is the only place it can come from.
+    private var githubRepo: (name: String, url: URL)? {
+        guard let dl = app.displayDownloadURL,
+              let host = dl.host?.lowercased(),
+              host == "github.com" || host == "www.github.com" else { return nil }
+        let parts = dl.pathComponents.filter { $0 != "/" }
+        guard parts.count >= 2,
+              let repoURL = URL(string: "https://github.com/\(parts[0])/\(parts[1])")
+        else { return nil }
+        return ("\(parts[0])/\(parts[1])", repoURL)
+    }
+
 
     private var header: some View {
         HStack(spacing: 16) {
@@ -128,27 +148,6 @@ struct AppDetailView: View {
                     }
                 }
             }
-
-            folderRow
-        }
-    }
-
-    private var folderRow: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            let _ = folderVersion
-            if let name = DownloadsFolderManager.shared.customFolderName {
-                Text("下载目录：「文件」App 里的「\(name)」文件夹")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                Button("更改下载目录") { pickDownloadsFolder() }
-                    .font(.footnote)
-            } else {
-                Text("尚未指定「文件」App 的下载目录，默认存到 \(defaultDownloadsLocationDescription)。")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                Button("指定「文件」App 里的下载目录") { pickDownloadsFolder() }
-                    .font(.footnote)
-            }
         }
     }
 
@@ -162,17 +161,6 @@ struct AppDetailView: View {
             deleteOriginalOnSaveToFiles: !downloader.savedIntoCustomFolder,
             onMoved: { movedToFiles = true }
         )
-    }
-
-    /// Opens the system folder picker (presented by UIKit from the topmost
-    /// view controller); a picked folder is saved as the downloads directory.
-    private func pickDownloadsFolder() {
-        FolderPickerPresenter.shared.present { url in
-            if let url {
-                DownloadsFolderManager.shared.saveBookmark(for: url)
-                folderVersion += 1
-            }
-        }
     }
 
     private var infoGrid: some View {
