@@ -84,9 +84,8 @@ struct ContentView: View {
 
     private func expansionBinding(for id: String) -> Binding<Bool> {
         Binding(
-            // Groups start collapsed. While searching, every group reads as
-            // expanded so matches are visible without manual unfolding.
-            get: { searchText.isEmpty ? (expansion[id] ?? false) : true },
+            // Groups start collapsed.
+            get: { expansion[id] ?? false },
             set: { expansion[id] = $0 }
         )
     }
