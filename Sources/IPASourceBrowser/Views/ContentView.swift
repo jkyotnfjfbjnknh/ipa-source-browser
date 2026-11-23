@@ -108,6 +108,15 @@ struct ContentView: View {
             Spacer()
             if loaded.isLoading {
                 ProgressView()
+            } else {
+                Button {
+                    Task { await store.refresh(loaded.subscription) }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.subheadline)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("刷新这个源")
             }
         }
         .padding(.vertical, 4)
