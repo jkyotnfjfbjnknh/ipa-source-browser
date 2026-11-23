@@ -77,6 +77,16 @@ struct ContentView: View {
                 } label: {
                     sourceHeader(for: loaded)
                 }
+                // Swipe left on the group header row to reveal a Refresh
+                // action for just this source (like a delete swipe action).
+                .swipeActions(edge: .trailing) {
+                    Button {
+                        Task { await store.refresh(loaded.subscription) }
+                    } label: {
+                        Label("刷新", systemImage: "arrow.clockwise")
+                    }
+                    .tint(.blue)
+                }
             }
         }
         .listStyle(.insetGrouped)
@@ -108,15 +118,6 @@ struct ContentView: View {
             Spacer()
             if loaded.isLoading {
                 ProgressView()
-            } else {
-                Button {
-                    Task { await store.refresh(loaded.subscription) }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.subheadline)
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel("刷新这个源")
             }
         }
         .padding(.vertical, 4)
