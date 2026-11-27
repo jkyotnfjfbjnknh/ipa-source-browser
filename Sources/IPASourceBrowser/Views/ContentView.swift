@@ -74,6 +74,9 @@ struct ContentView: View {
             }
         }
         .listStyle(.insetGrouped)
+        // Real Sections get the system's generous inter-section spacing;
+        // tighten it back to the compact gap the groups had before.
+        .listSectionSpacing(16)
     }
 
     /// Groups start collapsed.
