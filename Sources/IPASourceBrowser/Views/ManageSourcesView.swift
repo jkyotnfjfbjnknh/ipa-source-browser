@@ -67,7 +67,16 @@ struct ManageSourcesView: View {
                         store.moveSource(from: source, to: destination)
                     }
                 } header: {
-                    Text("已订阅（\(store.subscriptions.count)）")
+                    HStack {
+                        Text("已订阅（\(store.subscriptions.count)）")
+                        Spacer()
+                        Button {
+                            Task { await store.refreshAll() }
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        .accessibilityLabel("刷新全部源")
+                    }
                 } footer: {
                     Text("左滑可取消订阅，拖动可排序。")
                 }

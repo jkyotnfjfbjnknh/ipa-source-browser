@@ -3,8 +3,9 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var store = SourceStore()
     @State private var searchText = ""
-    /// Expansion state per source, bound to a DisclosureGroup — the system's
-    /// own control, which animates expansion/collapse and rotates its chevron.
+    /// Expansion state per source. Groups are built as a Section with a
+    /// tappable header row (not a DisclosureGroup) so the header's swipe
+    /// action stays on the header row only and never leaks onto app rows.
     @State private var expansion: [String: Bool] = [:]
     @State private var showManage = false
 
@@ -37,12 +38,7 @@ struct ContentView: View {
             .navigationTitle("IPA 源商店")
             .searchable(text: $searchText, prompt: "搜索应用")
             .toolbar {
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    Button {
-                        Task { await store.refreshAll() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showManage = true
                     } label: {
@@ -69,35 +65,49 @@ struct ContentView: View {
     private var sourceList: some View {
         List {
             ForEach(store.loaded) { loaded in
-                // DisclosureGroup is the system's own expandable control:
-                // it animates expand/collapse itself and rotates its
-                // disclosure chevron (trailing side) with the same motion.
-                DisclosureGroup(isExpanded: expansionBinding(for: loaded.id)) {
-                    sectionBody(for: loaded)
-                } label: {
-                    sourceHeader(for: loaded)
-                }
-                // Swipe left on the group header row to reveal a Refresh
-                // action for just this source (like a delete swipe action).
-                .swipeActions(edge: .trailing) {
-                    Button {
-                        Task { await store.refresh(loaded.subscription) }
-                    } label: {
-                        Label("刷新", systemImage: "arrow.clockwise")
+                Section {
+                    sourceHeaderRow(for: loaded)
+                    if isExpanded(loaded.id) {
+                        sectionBody(for: loaded)
                     }
-                    .tint(.blue)
                 }
             }
         }
         .listStyle(.insetGrouped)
     }
 
-    private func expansionBinding(for id: String) -> Binding<Bool> {
-        Binding(
-            // Groups start collapsed.
-            get: { expansion[id] ?? false },
-            set: { expansion[id] = $0 }
-        )
+    /// Groups start collapsed.
+    private func isExpanded(_ id: String) -> Bool {
+        expansion[id] ?? false
+    }
+
+    /// The group's header row: tapping toggles expansion; swiping left
+    /// reveals a Refresh action for just this source. The swipe action is
+    /// attached to this row only, so app rows below never show it.
+    private func sourceHeaderRow(for loaded: LoadedSource) -> some View {
+        Button {
+            withAnimation {
+                expansion[loaded.id] = !isExpanded(loaded.id)
+            }
+        } label: {
+            HStack(spacing: 10) {
+                sourceHeader(for: loaded)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .rotationEffect(.degrees(isExpanded(loaded.id) ? 90 : 0))
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .swipeActions(edge: .trailing) {
+            Button {
+                Task { await store.refresh(loaded.subscription) }
+            } label: {
+                Label("刷新", systemImage: "arrow.clockwise")
+            }
+            .tint(.blue)
+        }
     }
 
     private func sourceHeader(for loaded: LoadedSource) -> some View {
